@@ -1,0 +1,879 @@
+{
+  "app": "OmniQM Studio",
+  "version": 1,
+  "exportedAt": "2026-11-17T12:21:22.424Z",
+  "jobs": [
+    {
+      "id": "job-forecasting-fd8v3t",
+      "moduleId": "forecasting",
+      "title": "Peramalan Permintaan 12 Bulan",
+      "enabled": true,
+      "input": {
+        "periodLabels": [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "Mei",
+          "Jun",
+          "Jul",
+          "Agu",
+          "Sep",
+          "Okt",
+          "Nov",
+          "Des"
+        ],
+        "values": [
+          410,
+          435,
+          420,
+          460,
+          485,
+          470,
+          510,
+          535,
+          525,
+          560,
+          590,
+          610
+        ],
+        "movingAvgWindow": 3,
+        "weightedWeights": [
+          0.5,
+          0.3,
+          0.2
+        ],
+        "alpha": 0.35,
+        "beta": 0.25,
+        "horizon": 3
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-inventory-xr41d2",
+      "moduleId": "inventory",
+      "title": "Pengendalian Persediaan (EOQ/ROP)",
+      "enabled": true,
+      "input": {
+        "model": "eoq",
+        "annualDemand": 7200,
+        "orderingCost": 150,
+        "holdingCostPerUnit": 12,
+        "unitPrice": 45,
+        "dailyDemandRate": 24,
+        "dailyProductionRate": 60,
+        "leadTimeDays": 5,
+        "demandStdDevDaily": 4,
+        "serviceLevelZ": 1.645,
+        "workingDaysPerYear": 300,
+        "discountTiers": [
+          {
+            "minQty": 1,
+            "maxQty": 499,
+            "unitPrice": 45
+          },
+          {
+            "minQty": 500,
+            "maxQty": 999,
+            "unitPrice": 42
+          },
+          {
+            "minQty": 1000,
+            "maxQty": null,
+            "unitPrice": 39
+          }
+        ],
+        "abcItems": [
+          {
+            "sku": "Motor Servo",
+            "annualUsage": 1200,
+            "unitCost": 85
+          },
+          {
+            "sku": "Panel Kontrol",
+            "annualUsage": 800,
+            "unitCost": 62
+          },
+          {
+            "sku": "Bearing Baja",
+            "annualUsage": 6500,
+            "unitCost": 4.5
+          },
+          {
+            "sku": "Kabel Sensor",
+            "annualUsage": 9000,
+            "unitCost": 1.8
+          },
+          {
+            "sku": "Baut M8",
+            "annualUsage": 25000,
+            "unitCost": 0.25
+          }
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-break-even-rjs0l1",
+      "moduleId": "break-even",
+      "title": "Analisis Titik Impas & Proses",
+      "enabled": true,
+      "input": {
+        "fixedCost": 120000,
+        "variableCostPerUnit": 32,
+        "sellingPricePerUnit": 58,
+        "targetProfit": 75000,
+        "expectedVolume": 7200,
+        "alternatives": [
+          {
+            "name": "Proses Manual",
+            "fixedCost": 45000,
+            "variableCost": 45
+          },
+          {
+            "name": "Semi-Otomatis",
+            "fixedCost": 120000,
+            "variableCost": 32
+          },
+          {
+            "name": "Otomasi Penuh",
+            "fixedCost": 240000,
+            "variableCost": 18
+          }
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-linear-programming-y2l7ah",
+      "moduleId": "linear-programming",
+      "title": "Optimasi Bauran Produk (LP)",
+      "enabled": true,
+      "input": {
+        "sense": "max",
+        "variableNames": [
+          "Meja",
+          "Kursi"
+        ],
+        "objectiveCoeffs": [
+          70,
+          50
+        ],
+        "constraints": [
+          {
+            "name": "Jam Pertukangan",
+            "coeffs": [
+              4,
+              3
+            ],
+            "sign": "<=",
+            "rhs": 240
+          },
+          {
+            "name": "Jam Pengecatan",
+            "coeffs": [
+              2,
+              1
+            ],
+            "sign": "<=",
+            "rhs": 100
+          },
+          {
+            "name": "Maksimal Kursi",
+            "coeffs": [
+              0,
+              1
+            ],
+            "sign": "<=",
+            "rhs": 60
+          }
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-integer-programming-pahoe4",
+      "moduleId": "integer-programming",
+      "title": "Seleksi Proyek Investasi (IP)",
+      "enabled": true,
+      "input": {
+        "sense": "max",
+        "variableNames": [
+          "Proyek A",
+          "Proyek B",
+          "Proyek C",
+          "Proyek D"
+        ],
+        "objectiveCoeffs": [
+          150,
+          210,
+          120,
+          95
+        ],
+        "variableTypes": [
+          "binary",
+          "binary",
+          "binary",
+          "binary"
+        ],
+        "constraints": [
+          {
+            "name": "Anggaran Tahun 1",
+            "coeffs": [
+              40,
+              65,
+              35,
+              25
+            ],
+            "sign": "<=",
+            "rhs": 110
+          },
+          {
+            "name": "Tenaga Ahli",
+            "coeffs": [
+              3,
+              4,
+              2,
+              2
+            ],
+            "sign": "<=",
+            "rhs": 8
+          }
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-transportation-8dv4c7",
+      "moduleId": "transportation",
+      "title": "Distribusi Antar Pabrik-Gudang",
+      "enabled": true,
+      "input": {
+        "sense": "min",
+        "sourceNames": [
+          "Pabrik Jakarta",
+          "Pabrik Bandung",
+          "Pabrik Surabaya"
+        ],
+        "destinationNames": [
+          "Gudang Medan",
+          "Gudang Semarang",
+          "Gudang Makassar",
+          "Gudang Bali"
+        ],
+        "costs": [
+          [
+            12,
+            8,
+            18,
+            15
+          ],
+          [
+            14,
+            6,
+            16,
+            12
+          ],
+          [
+            19,
+            10,
+            11,
+            7
+          ]
+        ],
+        "supplies": [
+          300,
+          450,
+          350
+        ],
+        "demands": [
+          250,
+          320,
+          280,
+          250
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-assignment-hs2z7w",
+      "moduleId": "assignment",
+      "title": "Penugasan Tim Produksi",
+      "enabled": true,
+      "input": {
+        "sense": "min",
+        "agentNames": [
+          "Tim Alpha",
+          "Tim Beta",
+          "Tim Gamma",
+          "Tim Delta"
+        ],
+        "taskNames": [
+          "Lini Perakitan",
+          "Lini Pengemasan",
+          "Quality Audit",
+          "Kalibrasi CNC"
+        ],
+        "costs": [
+          [
+            14,
+            18,
+            22,
+            16
+          ],
+          [
+            19,
+            12,
+            15,
+            21
+          ],
+          [
+            15,
+            20,
+            11,
+            14
+          ],
+          [
+            21,
+            16,
+            19,
+            12
+          ]
+        ]
+      },
+      "updatedAt": 1794918082423
+    },
+    {
+      "id": "job-project-management-veitmz",
+      "moduleId": "project-management",
+      "title": "Peluncuran Produk Baru (PERT/CPM)",
+      "enabled": true,
+      "input": {
+        "mode": "pert",
+        "targetTime": 26,
+        "activities": [
+          {
+            "id": "A",
+            "name": "Desain Produk",
+            "predecessors": [],
+            "optimistic": 3,
+            "mostLikely": 4,
+            "pessimistic": 5
+          },
+          {
+            "id": "B",
+            "name": "Riset Supplier",
+            "predecessors": [],
+            "optimistic": 2,
+            "mostLikely": 3,
+            "pessimistic": 4
+          },
+          {
+            "id": "C",
+            "name": "Pembuatan Cetakan",
+            "predecessors": [
+              "A"
+            ],
+            "optimistic": 5,
+            "mostLikely": 7,
+            "pessimistic": 11
+          },
+          {
+            "id": "D",
+            "name": "Pengadaan Material",
+            "predecessors": [
+              "B"
+            ],
+            "optimistic": 4,
+            "mostLikely": 6,
+            "pessimistic": 8
+          },
+          {
+            "id": "E",
+            "name": "Uji Prototipe",
+            "predecessors": [
+              "C",
+              "D"
+            ],
+            "optimistic": 4,
+            "mostLikely": 5,
+            "pessimistic": 8
+          },
+          {
+            "id": "F",
+            "name": "Setup Lini Produksi",
+            "predecessors": [
+              "C"
+            ],
+            "optimistic": 3,
+            "mostLikely": 4,
+            "pessimistic": 7
+          },
+          {
+            "id": "G",
+            "name": "Produksi Perdana",
+            "predecessors": [
+              "E",
+              "F"
+            ],
+            "optimistic": 5,
+            "mostLikely": 6,
+            "pessimistic": 9
+          }
+        ]
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-waiting-lines-g2enft",
+      "moduleId": "waiting-lines",
+      "title": "Antrean Layanan Pelanggan (M/M/s)",
+      "enabled": true,
+      "input": {
+        "model": "mms",
+        "arrivalRate": 18,
+        "serviceRate": 8,
+        "servers": 3,
+        "systemCapacity": 12,
+        "waitingCostPerHour": 35,
+        "serverCostPerHour": 22,
+        "timeUnit": "jam"
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-decision-analysis-yhw5za",
+      "moduleId": "decision-analysis",
+      "title": "Keputusan Ekspansi Kapasitas",
+      "enabled": true,
+      "input": {
+        "alternativeNames": [
+          "Bangun Pabrik Besar",
+          "Bangun Pabrik Sedang",
+          "Ekspansi Bertahap",
+          "Subkontrak"
+        ],
+        "stateNames": [
+          "Pasar Tinggi",
+          "Pasar Sedang",
+          "Pasar Lesu"
+        ],
+        "probabilities": [
+          0.35,
+          0.45,
+          0.2
+        ],
+        "payoffs": [
+          [
+            420,
+            190,
+            -110
+          ],
+          [
+            260,
+            210,
+            -25
+          ],
+          [
+            190,
+            150,
+            40
+          ],
+          [
+            130,
+            105,
+            65
+          ]
+        ],
+        "hurwiczAlpha": 0.65,
+        "isCostTable": false
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-quality-control-v8kia9",
+      "moduleId": "quality-control",
+      "title": "Peta Kendali X-bar & R",
+      "enabled": true,
+      "input": {
+        "chartType": "xbar-r",
+        "subgroupSize": 4,
+        "usl": 50.8,
+        "lsl": 49.2,
+        "samples": [
+          {
+            "label": "S1",
+            "values": [
+              50.1,
+              49.9,
+              50.2,
+              50
+            ]
+          },
+          {
+            "label": "S2",
+            "values": [
+              50.3,
+              50,
+              49.8,
+              50.1
+            ]
+          },
+          {
+            "label": "S3",
+            "values": [
+              49.7,
+              50.1,
+              50.2,
+              49.9
+            ]
+          },
+          {
+            "label": "S4",
+            "values": [
+              50.4,
+              50.3,
+              50.1,
+              50.2
+            ]
+          },
+          {
+            "label": "S5",
+            "values": [
+              49.8,
+              49.6,
+              50,
+              49.9
+            ]
+          },
+          {
+            "label": "S6",
+            "values": [
+              50.2,
+              50.1,
+              50.3,
+              50
+            ]
+          },
+          {
+            "label": "S7",
+            "values": [
+              50.6,
+              50.7,
+              50.5,
+              50.8
+            ]
+          },
+          {
+            "label": "S8",
+            "values": [
+              50,
+              49.9,
+              50.1,
+              50
+            ]
+          }
+        ]
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-network-models-tx8007",
+      "moduleId": "network-models",
+      "title": "Rute Terpendek Jaringan Logistik",
+      "enabled": true,
+      "input": {
+        "mode": "shortest-route",
+        "sourceNode": "Gudang Pusat",
+        "sinkNode": "Pelabuhan",
+        "directed": false,
+        "edges": [
+          {
+            "from": "Gudang Pusat",
+            "to": "Hub Barat",
+            "weight": 14
+          },
+          {
+            "from": "Gudang Pusat",
+            "to": "Hub Tengah",
+            "weight": 10
+          },
+          {
+            "from": "Hub Barat",
+            "to": "Hub Utara",
+            "weight": 12
+          },
+          {
+            "from": "Hub Tengah",
+            "to": "Hub Utara",
+            "weight": 9
+          },
+          {
+            "from": "Hub Tengah",
+            "to": "Hub Selatan",
+            "weight": 16
+          },
+          {
+            "from": "Hub Utara",
+            "to": "Pelabuhan",
+            "weight": 15
+          },
+          {
+            "from": "Hub Selatan",
+            "to": "Pelabuhan",
+            "weight": 8
+          },
+          {
+            "from": "Hub Barat",
+            "to": "Hub Selatan",
+            "weight": 11
+          }
+        ]
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-markov-analysis-cl3cri",
+      "moduleId": "markov-analysis",
+      "title": "Prediksi Pangsa Pasar Markov",
+      "enabled": true,
+      "input": {
+        "stateNames": [
+          "Brand Kita",
+          "Kompetitor A",
+          "Kompetitor B"
+        ],
+        "initialVector": [
+          0.4,
+          0.35,
+          0.25
+        ],
+        "transitionMatrix": [
+          [
+            0.82,
+            0.11,
+            0.07
+          ],
+          [
+            0.14,
+            0.76,
+            0.1
+          ],
+          [
+            0.12,
+            0.08,
+            0.8
+          ]
+        ],
+        "steps": 6
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-mrp-3bi706",
+      "moduleId": "mrp",
+      "title": "MRP Multi-Level Meja Kerja",
+      "enabled": true,
+      "input": {
+        "periodLabels": [
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6"
+        ],
+        "items": [
+          {
+            "item": "Produk Meja",
+            "level": 0,
+            "qtyPerParent": 1,
+            "leadTime": 1,
+            "onHand": 30,
+            "safetyStock": 0,
+            "lotSizing": "L4L",
+            "grossRequirements": [
+              0,
+              50,
+              40,
+              70,
+              60,
+              80
+            ],
+            "scheduledReceipts": [
+              0,
+              20,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "item": "Kaki Meja",
+            "level": 1,
+            "parent": "Produk Meja",
+            "qtyPerParent": 4,
+            "leadTime": 1,
+            "onHand": 100,
+            "safetyStock": 20,
+            "lotSizing": "FOQ",
+            "fixedOrderQty": 150,
+            "grossRequirements": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "scheduledReceipts": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "item": "Papan Atas",
+            "level": 1,
+            "parent": "Produk Meja",
+            "qtyPerParent": 1,
+            "leadTime": 1,
+            "onHand": 25,
+            "safetyStock": 10,
+            "lotSizing": "L4L",
+            "grossRequirements": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "scheduledReceipts": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-aggregate-planning-l9qtvq",
+      "moduleId": "aggregate-planning",
+      "title": "Perencanaan Agregat 4 Kuartal",
+      "enabled": true,
+      "input": {
+        "periodLabels": [
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4"
+        ],
+        "demands": [
+          1200,
+          1650,
+          1900,
+          1450
+        ],
+        "regularCapacity": [
+          1400,
+          1400,
+          1400,
+          1400
+        ],
+        "overtimeCapacity": [
+          250,
+          250,
+          300,
+          250
+        ],
+        "subcontractCapacity": [
+          300,
+          300,
+          350,
+          300
+        ],
+        "initialInventory": 150,
+        "initialWorkforce": 28,
+        "unitsPerWorker": 50,
+        "regularCostPerUnit": 25,
+        "overtimeCostPerUnit": 36,
+        "subcontractCostPerUnit": 42,
+        "holdingCostPerUnit": 4,
+        "backorderCostPerUnit": 18,
+        "hiringCostPerWorker": 400,
+        "firingCostPerWorker": 600
+      },
+      "updatedAt": 1794918082424
+    },
+    {
+      "id": "job-scheduling-sm5o9p",
+      "moduleId": "scheduling",
+      "title": "Penjadwalan Order Produksi",
+      "enabled": true,
+      "input": {
+        "mode": "single-machine",
+        "jobs": [
+          {
+            "jobId": "Order-101",
+            "processingTime": 6,
+            "processingTimeMachine2": 4,
+            "dueDate": 12
+          },
+          {
+            "jobId": "Order-102",
+            "processingTime": 3,
+            "processingTimeMachine2": 7,
+            "dueDate": 7
+          },
+          {
+            "jobId": "Order-103",
+            "processingTime": 9,
+            "processingTimeMachine2": 5,
+            "dueDate": 24
+          },
+          {
+            "jobId": "Order-104",
+            "processingTime": 4,
+            "processingTimeMachine2": 8,
+            "dueDate": 10
+          },
+          {
+            "jobId": "Order-105",
+            "processingTime": 7,
+            "processingTimeMachine2": 3,
+            "dueDate": 18
+          }
+        ]
+      },
+      "updatedAt": 1794918082424
+    }
+  ],
+  "links": [
+    {
+      "id": "link-fc-to-inv",
+      "sourceJobId": "job-forecasting-fd8v3t",
+      "sourceOutputKey": "annualizedForecast12",
+      "targetJobId": "job-inventory-xr41d2",
+      "targetField": "annualDemand",
+      "multiplier": 1
+    },
+    {
+      "id": "link-fc-to-bep",
+      "sourceJobId": "job-forecasting-fd8v3t",
+      "sourceOutputKey": "annualizedForecast12",
+      "targetJobId": "job-break-even-rjs0l1",
+      "targetField": "expectedVolume",
+      "multiplier": 1
+    }
+  ]
+}

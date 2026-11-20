@@ -1,0 +1,16 @@
+{
+  "name": "OmniQM Studio — Multi-Module POM-QM",
+  "short_name": "OmniQM",
+  "description": "Aplikasi Manajemen Operasi & Riset Operasi multi-modul paralel dengan upload Excel & CSV.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#113f67",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

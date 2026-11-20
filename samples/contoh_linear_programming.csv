@@ -1,0 +1,7 @@
+#module,linear-programming
+sense,max
+Komponen,Meja,Kursi,Sign,RHS
+Objective Z,70,50,,
+Jam Pertukangan,4,3,<=,240
+Jam Pengecatan,2,1,<=,100
+Maksimal Kursi,0,1,<=,60

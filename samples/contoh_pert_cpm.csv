@@ -1,0 +1,11 @@
+#module,project-management
+mode,pert
+targetTime,26
+ID,Aktivitas,Predecessors,Optimistic,MostLikely,Pessimistic
+A,Desain Produk,-,3,4,5
+B,Riset Supplier,-,2,3,4
+C,Pembuatan Cetakan,A,5,7,11
+D,Pengadaan Material,B,4,6,8
+E,Uji Prototipe,"C, D",4,5,8
+F,Setup Lini Produksi,C,3,4,7
+G,Produksi Perdana,"E, F",5,6,9
