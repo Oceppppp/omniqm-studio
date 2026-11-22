@@ -80,6 +80,8 @@ npm test            # 73 unit & mathematical audit tests (Vitest)
 npm run build       # Kompilasi TypeScript + Bundle produksi Vite
 ```
 
+- Product Requirements Document (PRD): [`docs/PRD.md`](docs/PRD.md)
+- Project Planning & Roadmap: [`docs/PROJECT_PLANNING.md`](docs/PROJECT_PLANNING.md)
 - Arsitektur Sistem: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Prinsip Desain UI (*Precision Analytical Workbench*): [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md)
 - Panduan Kontribusi: [`CONTRIBUTING.md`](CONTRIBUTING.md)
