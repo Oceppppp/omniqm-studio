@@ -15,6 +15,8 @@
   --bg-subtle: hsl(216, 22%, 95.5%);
   --bg-hover: hsl(216, 24%, 92%);
   --bg-highlight: hsl(210, 80%, 96%);
+  --bg-topbar: hsla(0, 0%, 100%, 0.94);
+  --bg-rail-header: hsla(0, 0%, 100%, 0.45);
 
   /* Typographic Ink */
   --text-primary: hsl(222, 47%, 11%);
@@ -87,4 +89,59 @@
   --shadow-floating:
     0 10px 28px -4px hsla(222, 47%, 11%, 0.14),
     0 2px 6px -1px hsla(222, 47%, 11%, 0.06);
+}
+
+/* Precision Dark Workbench — Restrained Slate-Ink planes, zero neon glow */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-app: hsl(220, 26%, 9%);
+  --bg-chrome: hsl(220, 24%, 11.5%);
+  --bg-surface: hsl(220, 22%, 14.5%);
+  --bg-subtle: hsl(220, 22%, 17.5%);
+  --bg-hover: hsl(220, 22%, 21%);
+  --bg-highlight: hsl(212, 45%, 19%);
+  --bg-topbar: hsla(220, 24%, 11.5%, 0.94);
+  --bg-rail-header: hsla(220, 22%, 14.5%, 0.65);
+
+  --text-primary: hsl(214, 32%, 93%);
+  --text-secondary: hsl(215, 22%, 77%);
+  --text-muted: hsl(215, 16%, 58%);
+  --text-faint: hsl(215, 14%, 46%);
+
+  --border-hairline: hsl(218, 20%, 23%);
+  --border-strong: hsl(217, 19%, 34%);
+  --border-focus: hsl(209, 78%, 62%);
+
+  --primary: hsl(209, 78%, 62%);
+  --primary-hover: hsl(209, 82%, 69%);
+  --primary-soft: hsla(209, 78%, 62%, 0.15);
+  --primary-border: hsla(209, 78%, 62%, 0.42);
+  --primary-ink: hsl(222, 47%, 9%);
+
+  --success: hsl(158, 62%, 52%);
+  --success-soft: hsla(158, 62%, 52%, 0.14);
+  --success-border: hsla(158, 62%, 52%, 0.36);
+
+  --warning: hsl(36, 92%, 60%);
+  --warning-soft: hsla(36, 92%, 60%, 0.14);
+  --warning-border: hsla(36, 92%, 60%, 0.38);
+
+  --error: hsl(4, 82%, 64%);
+  --error-soft: hsla(4, 82%, 64%, 0.15);
+  --error-border: hsla(4, 82%, 64%, 0.38);
+
+  --chart-1: hsl(209, 82%, 65%);
+  --chart-2: hsl(166, 66%, 52%);
+  --chart-3: hsl(34, 92%, 60%);
+  --chart-4: hsl(215, 26%, 68%);
+  --chart-5: hsl(4, 82%, 64%);
+  --chart-6: hsl(224, 84%, 72%);
+
+  --shadow-sheet:
+    0 1px 2px hsla(0, 0%, 0%, 0.35),
+    0 0 0 1px hsla(218, 20%, 23%, 0.85);
+  --shadow-floating:
+    0 14px 36px -4px hsla(0, 0%, 0%, 0.55),
+    0 2px 8px -1px hsla(0, 0%, 0%, 0.35);
 }

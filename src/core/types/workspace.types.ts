@@ -52,3 +52,14 @@ export interface ScenarioSnapshot {
   summary: BatchRunSummary;
 }
 
+export interface SavedProjectMeta {
+  id: string;
+  name: string;
+  updatedAt: number;
+  jobCount: number;
+  linkCount: number;
+}
+
+export type ThemeMode = 'light' | 'dark';
+
+

@@ -153,7 +153,7 @@ export function FileDropzone() {
             type="button"
             id="btn-dropzone-template"
             className="btn btn-sm"
-            onClick={downloadMasterTemplateExcel}
+            onClick={() => void downloadMasterTemplateExcel()}
           >
             <FileSpreadsheet size={14} /> Unduh Master Template (.xlsx)
           </button>

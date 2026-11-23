@@ -11,7 +11,15 @@ self.addEventListener('install', (event) => {
       );
     }),
   );
-  self.skipWaiting();
+  if (!self.registration || !self.registration.active) {
+    self.skipWaiting();
+  }
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('activate', (event) => {

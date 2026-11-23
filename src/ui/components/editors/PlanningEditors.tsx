@@ -708,7 +708,7 @@ export function SchedulingEditor({
             onChange({ ...input, mode: e.target.value as SchedulingInput['mode'] })
           }
         >
-          <option value="single-machine">Single Machine (FCFS, SPT, LPT, EDD, CR)</option>
+          <option value="single-machine">Single Machine (FCFS, SPT, WSPT, LPT, EDD, CR)</option>
           <option value="johnson-two-machine">2-Machine Flow Shop (Algoritma Johnson)</option>
         </select>
         <button
@@ -724,6 +724,7 @@ export function SchedulingEditor({
                   processingTime: 5,
                   processingTimeMachine2: 4,
                   dueDate: 15,
+                  weight: 1,
                 },
               ],
             })
@@ -741,6 +742,7 @@ export function SchedulingEditor({
               <th>Waktu Proses {input.mode === 'johnson-two-machine' ? '(Mesin 1)' : ''}</th>
               {input.mode === 'johnson-two-machine' && <th>Waktu Proses (Mesin 2)</th>}
               <th>Due Date</th>
+              {input.mode === 'single-machine' && <th>Bobot Prioritas (w)</th>}
               <th style={{ width: 42 }} />
             </tr>
           </thead>
@@ -802,6 +804,22 @@ export function SchedulingEditor({
                     }}
                   />
                 </td>
+                {input.mode === 'single-machine' && (
+                  <td>
+                    <input
+                      type="number"
+                      min={0.1}
+                      step="0.5"
+                      className="cell-input num"
+                      value={job.weight ?? 1}
+                      onChange={(e) => {
+                        const next = [...input.jobs];
+                        next[i] = { ...job, weight: Math.max(0.1, Number(e.target.value) || 1) };
+                        onChange({ ...input, jobs: next });
+                      }}
+                    />
+                  </td>
+                )}
                 <td>
                   {input.jobs.length > 1 && (
                     <button

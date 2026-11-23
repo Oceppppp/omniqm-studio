@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { Copy, Download, Play, UploadCloud } from 'lucide-react';
 import { MODULE_MAP } from '../../core/registry/moduleRegistry.ts';
 import type {
@@ -10,6 +11,7 @@ import type {
   InventoryInput,
   LinearProgrammingInput,
   MarkovAnalysisInput,
+  ModuleExecutionResult,
   ModuleInputData,
   MrpInput,
   NetworkModelsInput,
@@ -19,10 +21,10 @@ import type {
   TransportationInput,
   WaitingLinesInput,
 } from '../../core/types/module.types.ts';
-import { solveModuleJob } from '../../engines/index.ts';
 import { exportModuleInputCsv } from '../../io/exporters/csvExporter.ts';
 import { downloadSingleModuleTemplateExcel } from '../../io/exporters/excelExporter.ts';
 import { useWorkspace } from '../../store/workspaceContext.ts';
+import { runSingleJobAsync } from '../../workers/workerPool.ts';
 import { AggregatePlanningEditor } from './editors/AggregatePlanningEditor.tsx';
 import { MrpEditor } from './editors/MrpEditor.tsx';
 import {
@@ -50,6 +52,46 @@ export function ModuleInputPanel() {
   const { state, updateJobInput, updateJobMeta, duplicateJob, runAll, setView } = useWorkspace();
   const job = state.jobs.find((j) => j.id === state.activeJobId) ?? state.jobs[0];
 
+  const cachedBatchResult =
+    job &&
+    state.batchSummary?.resultsByJobId[job.id] &&
+    job.updatedAt <= state.batchSummary.finishedAt
+      ? state.batchSummary.resultsByJobId[job.id]
+      : null;
+
+  const [asyncResult, setAsyncResult] = useState<{
+    jobId: string;
+    updatedAt: number;
+    result: ModuleExecutionResult;
+  } | null>(null);
+  const reqSeqRef = useRef(0);
+
+  const isSameJobPreview = Boolean(job && asyncResult?.jobId === job.id);
+  const isAsyncFresh = Boolean(
+    job && asyncResult?.jobId === job.id && asyncResult.updatedAt === job.updatedAt,
+  );
+  const isSolvingPreview = Boolean(job && !cachedBatchResult && !isAsyncFresh);
+
+  useEffect(() => {
+    if (!job || cachedBatchResult || isAsyncFresh) return;
+
+    const targetJob = job;
+    const reqId = reqSeqRef.current + 1;
+    reqSeqRef.current = reqId;
+    const delayMs = isSameJobPreview ? 180 : 0;
+
+    const timer = window.setTimeout(() => {
+      void runSingleJobAsync(targetJob).then((res) => {
+        if (reqSeqRef.current !== reqId) return;
+        setAsyncResult({ jobId: targetJob.id, updatedAt: targetJob.updatedAt, result: res });
+      });
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [job, cachedBatchResult, isAsyncFresh, isSameJobPreview]);
+
   if (!job) {
     return (
       <>
@@ -76,12 +118,11 @@ export function ModuleInputPanel() {
     updateJobInput(job.id, nextInput);
   };
 
-  // Real-time local calculation preview for the currently edited module
   const liveResult =
-    state.batchSummary?.resultsByJobId[job.id] &&
-    job.updatedAt <= state.batchSummary.finishedAt
-      ? state.batchSummary.resultsByJobId[job.id]
-      : solveModuleJob(job);
+    cachedBatchResult ??
+    (asyncResult?.jobId === job.id ? asyncResult.result : null) ??
+    state.batchSummary?.resultsByJobId[job.id] ??
+    null;
 
   return (
     <>
@@ -120,7 +161,7 @@ export function ModuleInputPanel() {
           <button
             type="button"
             className="btn btn-sm"
-            onClick={() => downloadSingleModuleTemplateExcel(job)}
+            onClick={() => void downloadSingleModuleTemplateExcel(job)}
           >
             <Download size={13} /> Template .xlsx
           </button>
@@ -249,15 +290,25 @@ export function ModuleInputPanel() {
             </div>
             <h2 className="panel-title">Hasil Perhitungan Modul (Live Preview)</h2>
             <p className="panel-subtitle">
-              Tersinkron otomatis setiap kali parameter, koefisien, atau sel matriks diperbarui.
+              Dihitung otomatis melalui Web Worker Pool (debounce 180 ms) agar pengetikan matriks tetap mulus.
             </p>
           </div>
           <span className="sync-status mono-num">
-            <span className={`status-dot ${liveResult.status}`} />
-            {liveResult.executionMs} ms · Live Sync
+            <span className={`status-dot ${isSolvingPreview ? 'warning' : (liveResult?.status ?? 'success')}`} />
+            {isSolvingPreview
+              ? 'Menghitung di Worker…'
+              : liveResult
+                ? `${liveResult.executionMs} ms · Worker Sync`
+                : 'Menyiapkan…'}
           </span>
         </div>
-        <ResultView job={job} result={liveResult} />
+        {liveResult ? (
+          <ResultView job={job} result={liveResult} />
+        ) : (
+          <div style={{ padding: '1rem 0', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+            Menjalankan solver kuantitatif di Web Worker…
+          </div>
+        )}
       </section>
     </>
   );

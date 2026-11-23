@@ -13,9 +13,13 @@ import {
   Trash2,
   ChevronsDownUp,
   ChevronsUpDown,
+  X,
 } from 'lucide-react';
 import { MODULE_MAP } from '../../core/registry/moduleRegistry.ts';
+import type { ModuleExecutionResult } from '../../core/types/module.types.ts';
+import type { ModuleJob } from '../../core/types/workspace.types.ts';
 import { useWorkspace } from '../../store/workspaceContext.ts';
+import { MAX_SCENARIO_SNAPSHOTS } from '../../store/workspaceHistory.ts';
 import { ResultView } from './ResultView.tsx';
 
 function parseKpiNumber(val: string | number | undefined): number | null {
@@ -27,12 +31,25 @@ function parseKpiNumber(val: string | number | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function findMatchingSnapshotResult(
+  job: ModuleJob,
+  resultsByJobId: Record<string, ModuleExecutionResult>,
+): ModuleExecutionResult | undefined {
+  return (
+    resultsByJobId[job.id] ??
+    Object.values(resultsByJobId).find(
+      (r) => r.moduleId === job.moduleId && job.title.startsWith(r.jobTitle),
+    )
+  );
+}
+
 export function BatchDashboard() {
   const {
     state,
     selectJob,
     duplicateJob,
     saveScenarioSnapshot,
+    removeScenarioSnapshot,
     clearScenarioSnapshot,
     setView,
     runAll,
@@ -40,6 +57,7 @@ export function BatchDashboard() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'warning' | 'error'>('all');
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [scenarioLabel, setScenarioLabel] = useState('');
 
   const summary = state.batchSummary;
 
@@ -116,8 +134,13 @@ export function BatchDashboard() {
     return true;
   });
 
-  const snapshot = state.scenarioSnapshot;
-  const snapshotResults = snapshot?.summary.resultsByJobId ?? {};
+  const snapshots = state.scenarioSnapshots;
+  const primaryBaseline = snapshots[0] ?? null;
+
+  const handleSaveScenario = () => {
+    saveScenarioSnapshot(scenarioLabel);
+    setScenarioLabel('');
+  };
 
   return (
     <>
@@ -137,23 +160,38 @@ export function BatchDashboard() {
         </div>
 
         <div className="view-header-actions no-print">
-          <button
-            type="button"
-            id="btn-save-whatif-baseline"
-            className="btn btn-sm"
-            onClick={() => saveScenarioSnapshot()}
-            title="Simpan hasil saat ini sebagai baseline perbandingan skenario What-If"
-          >
-            <Bookmark size={13} /> Simpan Baseline What-If
-          </button>
-          {snapshot && (
+          <div className="scenario-input-group">
+            <input
+              type="text"
+              id="input-scenario-label"
+              className="form-control"
+              style={{ width: 155, height: 30, fontSize: 'var(--text-xs)' }}
+              placeholder="Nama skenario (opsional)"
+              value={scenarioLabel}
+              onChange={(e) => setScenarioLabel(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveScenario();
+              }}
+            />
+            <button
+              type="button"
+              id="btn-save-whatif-baseline"
+              className="btn btn-sm"
+              onClick={handleSaveScenario}
+              title={`Simpan hasil saat ini sebagai skenario What-If (maks. ${MAX_SCENARIO_SNAPSHOTS} skenario)`}
+            >
+              <Bookmark size={13} /> Simpan Skenario ({snapshots.length}/{MAX_SCENARIO_SNAPSHOTS})
+            </button>
+          </div>
+          {snapshots.length > 0 && (
             <button
               type="button"
               id="btn-clear-whatif-baseline"
               className="btn btn-sm btn-ghost"
               onClick={clearScenarioSnapshot}
+              title="Hapus seluruh skenario tersimpan"
             >
-              <Trash2 size={13} /> Hapus Baseline
+              <Trash2 size={13} /> Hapus Semua
             </button>
           )}
           <button type="button" className="btn btn-sm" onClick={() => setView('file-upload')}>
@@ -184,38 +222,55 @@ export function BatchDashboard() {
         </div>
       </section>
 
-      {snapshot && (
-        <section className="whatif-banner" aria-label="Perbandingan Skenario What-If">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+      {snapshots.length > 0 && primaryBaseline && (
+        <section className="whatif-banner" aria-label="Perbandingan Multi-Skenario What-If">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
               <div style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--primary)' }}>
-                Perbandingan Skenario What-If vs {snapshot.label}
+                Matriks Perbandingan Multi-Skenario What-If ({snapshots.length} Skenario Tersimpan vs Aktual)
               </div>
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                Menampilkan selisih KPI utama antara skenario baseline tersimpan dan hasil simulasi terbaru.
+                Kolom Delta dihitung antara skenario <strong>Aktual</strong> terhadap <strong>{primaryBaseline.label}</strong>. Simpan hingga {MAX_SCENARIO_SNAPSHOTS} skenario (mis. Pesimis, Baseline, Optimis) untuk membandingkan sensitivitas berdampingan.
               </div>
             </div>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+              {snapshots.map((snap, idx) => (
+                <span key={snap.id} className="scenario-chip">
+                  <span className="mono-num">#{idx + 1}</span> {snap.label}
+                  <button
+                    type="button"
+                    className="scenario-chip-remove"
+                    onClick={() => removeScenarioSnapshot(snap.id)}
+                    aria-label={`Hapus skenario ${snap.label}`}
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
           </div>
+
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>Modul &amp; Pekerjaan</th>
-                  <th>Metrik KPI Utama</th>
-                  <th>Baseline</th>
-                  <th>Skenario Saat Ini</th>
-                  <th>Selisih (Delta)</th>
+                  <th>KPI Utama</th>
+                  {snapshots.map((snap, idx) => (
+                    <th key={snap.id}>
+                      #{idx + 1} {snap.label}
+                    </th>
+                  ))}
+                  <th>Skenario Aktual</th>
+                  <th>Delta vs #1</th>
                 </tr>
               </thead>
               <tbody>
                 {executedJobs.map((job) => {
                   const curRes = summary.resultsByJobId[job.id];
-                  const baseRes =
-                    snapshotResults[job.id] ??
-                    Object.values(snapshotResults).find(
-                      (r) => r.moduleId === job.moduleId && job.title.startsWith(r.jobTitle),
-                    );
+                  const baseRes = findMatchingSnapshotResult(job, primaryBaseline.summary.resultsByJobId);
                   if (!baseRes) return null;
+
                   const baseKpi = baseRes.kpis[0];
                   const curKpi = curRes.kpis[0];
                   const nBase = parseKpiNumber(baseKpi?.value);
@@ -233,11 +288,19 @@ export function BatchDashboard() {
                         <strong>{job.title}</strong>
                       </td>
                       <td style={{ fontSize: 'var(--text-xs)' }}>{curKpi?.label ?? '-'}</td>
+                      {snapshots.map((snap) => {
+                        const sRes = findMatchingSnapshotResult(job, snap.summary.resultsByJobId);
+                        const sKpi = sRes?.kpis[0];
+                        return (
+                          <td key={`${job.id}-${snap.id}`} className="mono-num">
+                            {sKpi ? `${sKpi.value}${sKpi.unit ? ` ${sKpi.unit}` : ''}` : '-'}
+                          </td>
+                        );
+                      })}
                       <td className="mono-num">
-                        {baseKpi ? `${baseKpi.value} ${baseKpi.unit ?? ''}` : '-'}
-                      </td>
-                      <td className="mono-num">
-                        {curKpi ? `${curKpi.value} ${curKpi.unit ?? ''}` : '-'}
+                        <strong>
+                          {curKpi ? `${curKpi.value}${curKpi.unit ? ` ${curKpi.unit}` : ''}` : '-'}
+                        </strong>
                       </td>
                       <td className="mono-num">
                         {delta === null ? (

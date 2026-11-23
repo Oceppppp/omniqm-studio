@@ -146,7 +146,7 @@ function dispatchViaPool(task: QueuedTask): void {
   pendingQueue.push(task);
 }
 
-function runSingleJobViaWorker(job: ModuleJob): Promise<ModuleExecutionResult> {
+export function runSingleJobAsync(job: ModuleJob): Promise<ModuleExecutionResult> {
   if (typeof Worker === 'undefined') {
     return Promise.resolve(solveModuleJob(job));
   }
@@ -178,7 +178,7 @@ export async function runAllModulesSimultaneously(
           links,
           resultsByJobId,
         );
-        const result = await runSingleJobViaWorker(updatedJob);
+        const result = await runSingleJobAsync(updatedJob);
         if (appliedNotes.length > 0) {
           result.warnings = [...appliedNotes, ...result.warnings];
         }

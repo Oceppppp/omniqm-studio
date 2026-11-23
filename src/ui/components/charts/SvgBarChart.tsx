@@ -1,6 +1,11 @@
+import { useRef, useState } from 'react';
 import type { BarChartSpec } from '../../../core/types/chart.types.ts';
+import { ChartExportActions } from './ChartExportActions.tsx';
 
 export function SvgBarChart({ spec }: { spec: BarChartSpec }) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
   const width = 560;
   const height = 235;
   const pad = { top: 22, right: 20, bottom: 48, left: 56 };
@@ -19,97 +24,150 @@ export function SvgBarChart({ spec }: { spec: BarChartSpec }) {
   const slotW = plotW / barCount;
   const barW = Math.min(44, Math.max(12, slotW * 0.62));
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => minVal + range * f);
+  const hoveredBar = hoverIdx !== null ? spec.bars[hoverIdx] : null;
 
   return (
     <div className="chart-box">
-      <div className="chart-title">{spec.title}</div>
-      {spec.subtitle && <div className="chart-subtitle">{spec.subtitle}</div>}
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" style={{ maxHeight: 235, display: 'block' }}>
-        {yTicks.map((yv, i) => {
-          const y = yFor(yv);
-          return (
-            <g key={i}>
-              <line
-                x1={pad.left}
-                x2={width - pad.right}
-                y1={y}
-                y2={y}
-                stroke="var(--border-hairline)"
-                strokeDasharray="3 3"
-              />
-              <text
-                x={pad.left - 8}
-                y={y + 3}
-                textAnchor="end"
-                fontSize="9.5"
-                fill="var(--text-muted)"
-                className="mono-num"
-              >
-                {Math.abs(yv) >= 1000 ? `${(yv / 1000).toFixed(1)}k` : yv.toFixed(yv % 1 === 0 ? 0 : 1)}
-              </text>
-            </g>
-          );
-        })}
+      <div className="chart-header-row">
+        <div>
+          <div className="chart-title">{spec.title}</div>
+          {spec.subtitle && <div className="chart-subtitle">{spec.subtitle}</div>}
+        </div>
+        <ChartExportActions svgRef={svgRef} title={spec.title} />
+      </div>
 
-        <line
-          x1={pad.left}
-          x2={width - pad.right}
-          y1={zeroY}
-          y2={zeroY}
-          stroke="var(--border-strong)"
-        />
-        <line
-          x1={pad.left}
-          x2={pad.left}
-          y1={pad.top}
-          y2={pad.top + plotH}
-          stroke="var(--border-strong)"
-        />
+      <div className="chart-svg-wrap">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          width="100%"
+          style={{ maxHeight: 235, display: 'block' }}
+          onMouseLeave={() => setHoverIdx(null)}
+        >
+          {yTicks.map((yv, i) => {
+            const y = yFor(yv);
+            return (
+              <g key={i}>
+                <line
+                  x1={pad.left}
+                  x2={width - pad.right}
+                  y1={y}
+                  y2={y}
+                  stroke="var(--border-hairline)"
+                  strokeDasharray="3 3"
+                />
+                <text
+                  x={pad.left - 8}
+                  y={y + 3}
+                  textAnchor="end"
+                  fontSize="9.5"
+                  fill="var(--text-muted)"
+                  className="mono-num"
+                >
+                  {Math.abs(yv) >= 1000 ? `${(yv / 1000).toFixed(1)}k` : yv.toFixed(yv % 1 === 0 ? 0 : 1)}
+                </text>
+              </g>
+            );
+          })}
 
-        {spec.bars.map((b, idx) => {
-          const x = pad.left + idx * slotW + (slotW - barW) / 2;
-          const valY = yFor(b.value);
-          const topY = Math.min(zeroY, valY);
-          const barH = Math.max(2, Math.abs(zeroY - valY));
-          const fill = b.colorToken ?? 'var(--chart-1)';
-          return (
-            <g key={`${b.label}-${idx}`}>
-              <rect x={x} y={topY} width={barW} height={barH} rx={2.5} fill={fill} opacity={0.92} />
-              <text
-                x={x + barW / 2}
-                y={topY - 5}
-                textAnchor="middle"
-                fontSize="9.5"
-                fontWeight="600"
-                fill="var(--text-primary)"
-                className="mono-num"
+          <line
+            x1={pad.left}
+            x2={width - pad.right}
+            y1={zeroY}
+            y2={zeroY}
+            stroke="var(--border-strong)"
+          />
+          <line
+            x1={pad.left}
+            x2={pad.left}
+            y1={pad.top}
+            y2={pad.top + plotH}
+            stroke="var(--border-strong)"
+          />
+
+          {spec.bars.map((b, idx) => {
+            const x = pad.left + idx * slotW + (slotW - barW) / 2;
+            const valY = yFor(b.value);
+            const topY = Math.min(zeroY, valY);
+            const barH = Math.max(2, Math.abs(zeroY - valY));
+            const fill = b.colorToken ?? 'var(--chart-1)';
+            const isActive = hoverIdx === idx;
+            return (
+              <g
+                key={`${b.label}-${idx}`}
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={() => setHoverIdx(idx)}
               >
-                {Math.abs(b.value) >= 10000 ? `${(b.value / 1000).toFixed(1)}k` : b.value}
-              </text>
-              <text
-                x={x + barW / 2}
-                y={height - pad.bottom + 14}
-                textAnchor="middle"
-                fontSize="9.5"
-                fill="var(--text-secondary)"
-              >
-                {b.label.length > 12 ? `${b.label.slice(0, 11)}…` : b.label}
-              </text>
-              {b.annotation && (
+                <rect
+                  x={pad.left + idx * slotW}
+                  y={pad.top}
+                  width={slotW}
+                  height={plotH}
+                  fill="transparent"
+                />
+                <rect
+                  x={x}
+                  y={topY}
+                  width={barW}
+                  height={barH}
+                  rx={2.5}
+                  fill={fill}
+                  opacity={hoverIdx === null || isActive ? 0.94 : 0.45}
+                  stroke={isActive ? 'var(--text-primary)' : 'none'}
+                  strokeWidth={isActive ? 1.2 : 0}
+                />
                 <text
                   x={x + barW / 2}
-                  y={height - pad.bottom + 27}
+                  y={topY - 5}
                   textAnchor="middle"
-                  fontSize="8.5"
-                  fill="var(--text-muted)"
+                  fontSize="9.5"
+                  fontWeight="600"
+                  fill="var(--text-primary)"
+                  className="mono-num"
                 >
-                  {b.annotation}
+                  {Math.abs(b.value) >= 10000 ? `${(b.value / 1000).toFixed(1)}k` : b.value}
                 </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
+                <text
+                  x={x + barW / 2}
+                  y={height - pad.bottom + 14}
+                  textAnchor="middle"
+                  fontSize="9.5"
+                  fill="var(--text-secondary)"
+                >
+                  {b.label.length > 12 ? `${b.label.slice(0, 11)}…` : b.label}
+                </text>
+                {b.annotation && (
+                  <text
+                    x={x + barW / 2}
+                    y={height - pad.bottom + 27}
+                    textAnchor="middle"
+                    fontSize="8.5"
+                    fill="var(--text-muted)"
+                  >
+                    {b.annotation}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        {hoveredBar && (
+          <div className="chart-tooltip no-print" role="status">
+            <div className="chart-tooltip-title">{hoveredBar.label}</div>
+            <div className="chart-tooltip-row">
+              <span className="chart-tooltip-key">{spec.yLabel}</span>
+              <strong className="mono-num">{hoveredBar.value.toLocaleString('id-ID')}</strong>
+            </div>
+            {hoveredBar.annotation && (
+              <div className="chart-tooltip-row">
+                <span className="chart-tooltip-key">Catatan</span>
+                <span className="mono-num">{hoveredBar.annotation}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

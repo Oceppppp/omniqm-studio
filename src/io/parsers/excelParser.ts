@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import type { DetectedSheetCandidate } from '../../core/types/workspace.types.ts';
 import { detectModuleFromGrid, type RawGrid } from './fileDetector.ts';
 
@@ -7,10 +6,11 @@ export async function parseExcelFile(file: File): Promise<DetectedSheetCandidate
   return parseExcelArrayBuffer(file.name, buffer);
 }
 
-export function parseExcelArrayBuffer(
+export async function parseExcelArrayBuffer(
   fileName: string,
   buffer: ArrayBuffer,
-): DetectedSheetCandidate[] {
+): Promise<DetectedSheetCandidate[]> {
+  const XLSX = await import('xlsx');
   const workbook = XLSX.read(buffer, { type: 'array' });
   const candidates: DetectedSheetCandidate[] = [];
 

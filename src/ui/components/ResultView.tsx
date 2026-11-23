@@ -14,9 +14,15 @@ interface ResultViewProps {
   job?: ModuleJob;
   result: ModuleExecutionResult;
   compactHeader?: boolean;
+  forceExpandAudit?: boolean;
 }
 
-export function ResultView({ job, result, compactHeader = false }: ResultViewProps) {
+export function ResultView({
+  job,
+  result,
+  compactHeader = false,
+  forceExpandAudit = false,
+}: ResultViewProps) {
   const meta = MODULE_MAP[result.moduleId];
   const [isPrinting, setIsPrinting] = useState(false);
 
@@ -209,7 +215,7 @@ export function ResultView({ job, result, compactHeader = false }: ResultViewPro
       })}
 
       {result.auditSteps && result.auditSteps.length > 0 && (
-        <details className="audit-accordion" open={isPrinting || undefined}>
+        <details className="audit-accordion" open={isPrinting || forceExpandAudit || undefined}>
           <summary className="audit-summary">
             <BookOpen size={13} />
             <span>Langkah Perhitungan &amp; Rumus ({result.auditSteps.length} Langkah)</span>

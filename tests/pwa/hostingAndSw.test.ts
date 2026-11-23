@@ -65,6 +65,7 @@ describe('Netlify Hosting Config & Service Worker Cache Strategy', () => {
 
     vm.runInNewContext(swSource, sandbox);
     expect(typeof listeners.install).toBe('function');
+    expect(typeof listeners.message).toBe('function');
     expect(typeof listeners.activate).toBe('function');
     expect(typeof listeners.fetch).toBe('function');
   });
@@ -78,5 +79,22 @@ describe('Netlify Hosting Config & Service Worker Cache Strategy', () => {
     expect(poolSrc).toContain('disposeWorkerPool');
     expect(poolSrc).toContain('pendingQueue');
     expect(poolSrc).toContain('getWorkerPoolSize');
+    expect(poolSrc).toContain('export function runSingleJobAsync');
+  });
+
+  it('provides vercel.json with Vite build, anti-stale-cache headers, and SPA rewrite', () => {
+    const raw = fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8');
+    const cfg = JSON.parse(raw) as {
+      buildCommand: string;
+      outputDirectory: string;
+      headers: { source: string; headers: { key: string; value: string }[] }[];
+      rewrites: { source: string; destination: string }[];
+    };
+    expect(cfg.buildCommand).toBe('npm run build');
+    expect(cfg.outputDirectory).toBe('dist');
+    expect(cfg.headers.some((h) => h.source === '/sw.js')).toBe(true);
+    expect(cfg.headers.some((h) => h.source === '/index.html')).toBe(true);
+    expect(cfg.headers.some((h) => h.source === '/assets/(.*)')).toBe(true);
+    expect(cfg.rewrites.some((r) => r.destination === '/index.html')).toBe(true);
   });
 });

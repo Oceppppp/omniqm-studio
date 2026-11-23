@@ -5,12 +5,19 @@ import type {
   DetectedSheetCandidate,
   ModuleJob,
   PipelineLink,
+  SavedProjectMeta,
   ScenarioSnapshot,
+  ThemeMode,
 } from '../core/types/workspace.types.ts';
+import type { WorkspaceHistoryEntry } from './workspaceHistory.ts';
 
 export type ActiveViewMode = 'batch-results' | 'module-editor' | 'file-upload' | 'pipeline';
+export type PrintReportMode = 'current' | 'full';
 
 export interface WorkspaceState {
+  activeProjectId: string;
+  activeProjectName: string;
+  projects: SavedProjectMeta[];
   jobs: ModuleJob[];
   links: PipelineLink[];
   activeJobId: string | null;
@@ -18,13 +25,24 @@ export interface WorkspaceState {
   isRunning: boolean;
   progress: { completed: number; total: number } | null;
   batchSummary: BatchRunSummary | null;
-  scenarioSnapshot: ScenarioSnapshot | null;
+  scenarioSnapshots: ScenarioSnapshot[];
   pendingCandidates: DetectedSheetCandidate[];
   showArchitectureModal: boolean;
+  showCommandPalette: boolean;
+  sidebarOpen: boolean;
+  theme: ThemeMode;
+  printMode: PrintReportMode;
+  storageWarning: string | null;
+  past: WorkspaceHistoryEntry[];
+  future: WorkspaceHistoryEntry[];
 }
 
 export interface WorkspaceContextValue {
   state: WorkspaceState;
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
   setView: (view: ActiveViewMode) => void;
   selectJob: (jobId: string, openEditor?: boolean) => void;
   addModuleJob: (moduleId: ModuleId) => void;
@@ -38,7 +56,12 @@ export interface WorkspaceContextValue {
   loadPpicPipelinePreset: (autoRun?: boolean) => void;
   clearWorkspace: () => void;
   saveScenarioSnapshot: (label?: string) => void;
+  removeScenarioSnapshot: (snapshotId: string) => void;
   clearScenarioSnapshot: () => void;
+  createProject: (name: string, preset?: 'empty' | 'sample16' | 'ppic') => void;
+  switchProject: (projectId: string) => void;
+  renameProject: (projectId: string, name: string) => void;
+  deleteProject: (projectId: string) => void;
   setPendingCandidates: (candidates: DetectedSheetCandidate[]) => void;
   updateCandidate: (id: string, patch: Partial<DetectedSheetCandidate>) => void;
   commitPendingCandidates: (replaceExisting: boolean, autoRun?: boolean) => void;
@@ -50,6 +73,11 @@ export interface WorkspaceContextValue {
   ) => void;
   runAll: (switchToBatchView?: boolean) => Promise<void>;
   toggleArchModal: (open: boolean) => void;
+  setShowCommandPalette: (open: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
+  toggleTheme: () => void;
+  triggerFullPdfReport: () => void;
+  dismissStorageWarning: () => void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);

@@ -15,9 +15,9 @@ import { createAllModulesSamplePack } from '../../src/io/templates/sampleDataset
 import { parseClipboardGrid, parseClipboardNumber } from '../../src/ui/utils/gridPaste.ts';
 
 describe('Multi-Sheet Excel Ingestion, CSV Parsing, & Parallel Pipeline Execution', () => {
-  it('round-trips all 16 modules from Master Excel Workbook and executes every module cleanly', () => {
-    const buf = buildMasterTemplateBuffer();
-    const candidates = parseExcelArrayBuffer('Master_Template_16_Modul_OmniQM.xlsx', buf);
+  it('round-trips all 16 modules from Master Excel Workbook and executes every module cleanly', async () => {
+    const buf = await buildMasterTemplateBuffer();
+    const candidates = await parseExcelArrayBuffer('Master_Template_16_Modul_OmniQM.xlsx', buf);
 
     expect(candidates.length).toBe(MODULE_REGISTRY.length);
     for (const cand of candidates) {

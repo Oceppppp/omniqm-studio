@@ -33,7 +33,15 @@ Berbeda dengan POM-QM klasik yang hanya membuka satu modul per jendela dan mengh
 | `MK` | Markov Analysis | Simulasi $n$-langkah, Steady-State Ergodik + jarak konvergensi $L_1$, Matriks Fundamental $N$ & Absorpsi $B$ dari $\pi_0$ |
 | `MR` | MRP | Ledakan BOM Multi-Parent (Low-Level Coding), peringatan rambatan Past-Due, perbandingan biaya Lot Sizing L4L, FOQ, POQ, EOQ & Silver-Meal |
 | `AP` | Aggregate Planning | Perbandingan Chase, Level, Mixed, dan Optimal Transportation Method (Bowman LP dengan penalti shortage multi-periode) |
-| `SC` | Job Shop Scheduling | Single-Machine (FCFS, SPT, LPT, EDD, CR + Max Tardiness) & Algoritma Johnson 2-Mesin + Gantt Chart |
+| `SC` | Job Shop Scheduling | Single-Machine (FCFS, SPT, WSPT berbobot, LPT, EDD, CR + Max Tardiness + Gantt Chart) & Algoritma Johnson 2-Mesin + Gantt Chart |
+
+---
+
+## Fitur Analitik & Workbench v1.2
+
+- **Performa & Ketahanan:** *Live preview* editor berbasis **debounced Web Worker Pool** (anti-freeze), *lazy dynamic loading* SheetJS `xlsx` (`~423 kB` hanya diunduh saat upload/ekspor Excel), **`WorkspaceErrorBoundary`** dengan pemulihan backup `.json`, notifikasi update Service Worker non-intrusif, dan proteksi peringatan kuota `localStorage`.
+- **Visualisasi Interaktif & Ekspor HD:** *Hover tooltip* + *crosshair* presisi serta tombol unduh **`.svg`** & **`.png` (2x Hi-DPI)** pada seluruh 6 komponen grafik.
+- **Produktivitas Analitik:** **Undo / Redo (`Ctrl+Z` / `Ctrl+Y`, 30 langkah)**, **Command Palette (`Ctrl+K`)**, shortcut **`Ctrl+Enter`** (Jalankan Semua), **Komparasi Multi-Skenario *What-If*** (hingga 5 skenario berdampingan), **Multi-Proyek Lokal**, **Laporan PDF Lengkap** (halaman sampul + *page-break* per modul), auto-width kolom `.xlsx`, **Mobile Collapsible Drawer**, dan **Dark Workbench Theme**.
 
 ---
 
@@ -47,11 +55,11 @@ npm ci
 npm run dev
 ```
 
-### 2. Deploy Otomatis di Netlify (GitHub → Netlify)
-Repositori ini sudah dilengkapi [`netlify.toml`](netlify.toml), [`public/_headers`](public/_headers), [`public/_redirects`](public/_redirects), serta Service Worker ([`public/sw.js`](public/sw.js)) dengan cache versi otomatis per build:
-1. Masuk ke **Netlify** → **Add new site** → **Import an existing project** → pilih **`Oceppppp/omniqm-studio`**.
-2. Netlify otomatis membaca `netlify.toml` (`npm run build`, publish directory `dist`, `NODE_VERSION=22`).
-3. Setiap `git push` ke branch `main` otomatis membangun ulang dan memperbarui aplikasi secara langsung.
+### 2. Deploy Otomatis di Vercel atau Netlify (GitHub → Vercel / Netlify)
+Repositori ini dilengkapi konfigurasi produksi untuk **Vercel** ([`vercel.json`](vercel.json)) maupun **Netlify** ([`netlify.toml`](netlify.toml), [`public/_headers`](public/_headers), [`public/_redirects`](public/_redirects)) beserta Service Worker ([`public/sw.js`](public/sw.js)) berstempel SHA-256 otomatis per build:
+- **Vercel:** Import repositori **`Oceppppp/omniqm-studio`** di Vercel → framework Vite terdeteksi otomatis (`npm run build`, output `dist`, SPA rewrites & anti-stale-cache headers dari `vercel.json`).
+- **Netlify:** Add new site → Import **`Oceppppp/omniqm-studio`** → Netlify otomatis membaca `netlify.toml` (`NODE_VERSION=22`, publish `dist`).
+- Setiap `git push` ke branch `main` otomatis membangun ulang dan memperbarui aplikasi secara langsung.
 
 ### 3. Jalankan via Docker
 ```bash
@@ -76,7 +84,7 @@ Folder [`samples/`](samples/) berisi dataset siap pakai untuk dicoba pada menu *
 ```bash
 npm run lint        # Oxlint static analysis (0 warnings, 0 errors)
 npx tsc --noEmit    # TypeScript strict typecheck
-npm test            # 73 unit & mathematical audit tests (Vitest)
+npm test            # 79 unit, IO, PWA & mathematical audit tests (Vitest)
 npm run build       # Kompilasi TypeScript + Bundle produksi Vite
 ```
 

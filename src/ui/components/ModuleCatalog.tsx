@@ -1,5 +1,16 @@
 import { useState } from 'react';
-import { Plus, RotateCcw, Trash2, Sparkles, GitBranch, Search } from 'lucide-react';
+import {
+  FolderKanban,
+  FolderPlus,
+  GitBranch,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { MODULE_MAP, MODULE_REGISTRY } from '../../core/registry/moduleRegistry.ts';
 import type { ModuleCategory, ModuleId } from '../../core/types/module.types.ts';
 import { useWorkspace } from '../../store/workspaceContext.ts';
@@ -41,13 +52,174 @@ export function ModuleCatalog() {
     loadSampleAll16,
     loadPpicPipelinePreset,
     clearWorkspace,
+    createProject,
+    switchProject,
+    renameProject,
+    deleteProject,
+    setSidebarOpen,
   } = useWorkspace();
 
   const [catalogQuery, setCatalogQuery] = useState('');
+  const [creatingProject, setCreatingProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectPreset, setNewProjectPreset] = useState<'empty' | 'sample16' | 'ppic'>('ppic');
+  const [renamingProject, setRenamingProject] = useState(false);
+  const [renameDraft, setRenameDraft] = useState('');
+
   const q = catalogQuery.trim().toLowerCase();
 
+  const handleCreateProject = () => {
+    createProject(newProjectName, newProjectPreset);
+    setNewProjectName('');
+    setCreatingProject(false);
+  };
+
+  const handleCommitRename = () => {
+    renameProject(state.activeProjectId, renameDraft);
+    setRenamingProject(false);
+  };
+
   return (
-    <aside className="sidebar-rail no-print" aria-label="Antrean dan Katalog Modul">
+    <aside
+      className={`sidebar-rail no-print ${state.sidebarOpen ? 'open' : ''}`}
+      aria-label="Antrean dan Katalog Modul"
+    >
+      {/* Multi-Project Switcher */}
+      <div className="sidebar-section project-switcher-section">
+        <div className="rail-heading" style={{ marginBottom: '0.4rem' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <FolderKanban size={12} /> Proyek Lokal ({state.projects.length})
+          </span>
+          <div style={{ display: 'inline-flex', gap: '2px' }}>
+            <button
+              type="button"
+              id="btn-new-project"
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                setCreatingProject((v) => !v);
+                setRenamingProject(false);
+              }}
+              title="Buat proyek workspace baru"
+              aria-label="Buat proyek baru"
+            >
+              <FolderPlus size={12} />
+            </button>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => {
+                setRenameDraft(state.activeProjectName);
+                setRenamingProject((v) => !v);
+                setCreatingProject(false);
+              }}
+              title="Ubah nama proyek aktif"
+              aria-label="Ubah nama proyek aktif"
+            >
+              <Pencil size={11} />
+            </button>
+            {state.projects.length > 1 && (
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={() => deleteProject(state.activeProjectId)}
+                title="Hapus proyek aktif"
+                aria-label="Hapus proyek aktif"
+              >
+                <Trash2 size={11} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost mobile-drawer-close"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Tutup katalog"
+            >
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+
+        <select
+          id="select-active-project"
+          className="form-control"
+          style={{ height: 30, fontSize: 'var(--text-xs)' }}
+          value={state.activeProjectId}
+          onChange={(e) => switchProject(e.target.value)}
+          aria-label="Pilih proyek aktif"
+        >
+          {state.projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name} ({p.jobCount} modul)
+            </option>
+          ))}
+        </select>
+
+        {renamingProject && (
+          <div className="project-inline-form">
+            <input
+              type="text"
+              className="form-control"
+              style={{ height: 28, fontSize: 'var(--text-xs)' }}
+              value={renameDraft}
+              onChange={(e) => setRenameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCommitRename();
+                if (e.key === 'Escape') setRenamingProject(false);
+              }}
+              placeholder="Nama proyek baru"
+            />
+            <button type="button" className="btn btn-sm btn-primary" onClick={handleCommitRename}>
+              Simpan
+            </button>
+          </div>
+        )}
+
+        {creatingProject && (
+          <div className="project-create-box">
+            <input
+              type="text"
+              id="input-new-project-name"
+              className="form-control"
+              style={{ height: 28, fontSize: 'var(--text-xs)' }}
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleCreateProject();
+              }}
+              placeholder="Mis. UAS PPIC / Pabrik A"
+            />
+            <select
+              className="form-control"
+              style={{ height: 28, fontSize: 'var(--text-xs)' }}
+              value={newProjectPreset}
+              onChange={(e) => setNewProjectPreset(e.target.value as 'empty' | 'sample16' | 'ppic')}
+            >
+              <option value="ppic">Template Rantai PPIC (5 Modul)</option>
+              <option value="sample16">Template Demo 16 Modul</option>
+              <option value="empty">Proyek Kosong</option>
+            </select>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <button
+                type="button"
+                id="btn-confirm-new-project"
+                className="btn btn-sm btn-primary"
+                style={{ flex: 1 }}
+                onClick={handleCreateProject}
+              >
+                Buat Proyek
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setCreatingProject(false)}
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="sidebar-section">
         <div className="rail-heading">
           <span className="tab-num">Antrean Aktif ({state.jobs.length})</span>
@@ -56,7 +228,7 @@ export function ModuleCatalog() {
             id="btn-clear-workspace"
             className="btn btn-sm btn-ghost"
             onClick={clearWorkspace}
-            title="Kosongkan antrean"
+            title="Kosongkan antrean (bisa dibatalkan via Undo)"
             aria-label="Kosongkan antrean modul"
           >
             <RotateCcw size={12} />

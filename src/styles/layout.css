@@ -11,7 +11,7 @@
   top: 0;
   z-index: 30;
   min-height: 54px;
-  background: hsla(0, 0%, 100%, 0.94);
+  background: var(--bg-topbar);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-hairline);
   padding: var(--space-2) var(--space-4);
@@ -20,6 +20,11 @@
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.btn.mobile-menu-btn,
+.btn.mobile-drawer-close {
+  display: none;
 }
 
 .brand-group {
@@ -119,6 +124,11 @@
   display: grid;
   grid-template-columns: 292px minmax(0, 1fr);
   min-height: calc(100vh - 54px);
+  position: relative;
+}
+
+.sidebar-backdrop {
+  display: none;
 }
 
 .sidebar-rail {
@@ -132,9 +142,9 @@
 }
 
 .sidebar-section {
-  padding: 0.85rem var(--space-3);
+  padding: 0.78rem var(--space-3);
   border-bottom: 1px solid var(--border-hairline);
-  background: hsla(0, 0%, 100%, 0.45);
+  background: var(--bg-rail-header);
 }
 
 .sidebar-scroll {
@@ -212,14 +222,38 @@
 }
 
 @media (max-width: 960px) {
+  .btn.mobile-menu-btn,
+  .btn.mobile-drawer-close {
+    display: inline-flex;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
   }
 
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: hsla(222, 47%, 11%, 0.48);
+    backdrop-filter: blur(2px);
+    z-index: 45;
+  }
+
   .sidebar-rail {
-    position: static;
-    max-height: none;
-    border-right: none;
-    border-bottom: 1px solid var(--border-hairline);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(312px, 88vw);
+    max-height: 100vh;
+    z-index: 50;
+    transform: translateX(-105%);
+    transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    box-shadow: var(--shadow-floating);
+  }
+
+  .sidebar-rail.open {
+    transform: translateX(0);
   }
 }

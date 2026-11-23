@@ -6,16 +6,27 @@ import type {
   SchedulingJobInput,
 } from '../core/types/module.types.ts';
 
+interface SingleMachineSlot {
+  jobId: string;
+  start: number;
+  finish: number;
+  dueDate: number;
+  lateness: number;
+  weight: number;
+}
+
 interface RuleEval {
   ruleName: string;
   sequence: string[];
   avgCompletion: number;
+  weightedFlowTime: number;
   utilizationPct: number;
   avgJobsInSystem: number;
   avgLateness: number;
   maxLateness: number;
   tardyCount: number;
   makespan: number;
+  slots: SingleMachineSlot[];
   detailRows: (string | number)[][];
 }
 
@@ -25,14 +36,17 @@ function evaluateSingleMachineRule(
 ): RuleEval {
   let time = 0;
   let sumFlow = 0;
+  let sumWeightedFlow = 0;
   let sumProc = 0;
   let sumLateness = 0;
   let maxLateness = 0;
   let tardyCount = 0;
+  const slots: SingleMachineSlot[] = [];
   const detailRows: (string | number)[][] = [];
 
   for (const job of orderedJobs) {
     const proc = Math.max(0, job.processingTime);
+    const weight = job.weight !== undefined && Number.isFinite(job.weight) && job.weight > 0 ? job.weight : 1;
     const start = time;
     const finish = start + proc;
     const lateness = Math.max(0, finish - job.dueDate);
@@ -41,12 +55,15 @@ function evaluateSingleMachineRule(
 
     time = finish;
     sumFlow += finish;
+    sumWeightedFlow += weight * finish;
     sumProc += proc;
     sumLateness += lateness;
 
+    slots.push({ jobId: job.jobId, start, finish, dueDate: job.dueDate, lateness, weight });
     detailRows.push([
       job.jobId,
       roundTo(proc, 2),
+      roundTo(weight, 2),
       roundTo(job.dueDate, 2),
       roundTo(start, 2),
       roundTo(finish, 2),
@@ -59,12 +76,14 @@ function evaluateSingleMachineRule(
     ruleName,
     sequence: orderedJobs.map((j) => j.jobId),
     avgCompletion: sumFlow / n,
+    weightedFlowTime: sumWeightedFlow,
     utilizationPct: sumFlow > 0 ? (sumProc / sumFlow) * 100 : 100,
     avgJobsInSystem: sumProc > 0 ? sumFlow / sumProc : 1,
     avgLateness: sumLateness / n,
     maxLateness,
     tardyCount,
     makespan: time,
+    slots,
     detailRows,
   };
 }
@@ -279,6 +298,14 @@ export function solveScheduling(
       [...input.jobs].sort((a, b) => a.processingTime - b.processingTime),
     ),
     evaluateSingleMachineRule(
+      'WSPT (Weighted SPT)',
+      [...input.jobs].sort((a, b) => {
+        const wa = a.weight !== undefined && Number.isFinite(a.weight) && a.weight > 0 ? a.weight : 1;
+        const wb = b.weight !== undefined && Number.isFinite(b.weight) && b.weight > 0 ? b.weight : 1;
+        return a.processingTime / wa - b.processingTime / wb;
+      }),
+    ),
+    evaluateSingleMachineRule(
       'LPT (Longest Processing Time)',
       [...input.jobs].sort((a, b) => b.processingTime - a.processingTime),
     ),
@@ -297,19 +324,26 @@ export function solveScheduling(
   ];
 
   const bestFlow = [...evals].sort((a, b) => a.avgCompletion - b.avgCompletion)[0];
+  const bestWeighted = [...evals].sort((a, b) => a.weightedFlowTime - b.weightedFlowTime)[0];
   const bestAvgLate = [...evals].sort((a, b) => a.avgLateness - b.avgLateness)[0];
   const bestMaxLate = [...evals].sort((a, b) => a.maxLateness - b.maxLateness)[0];
   const fcfs = evals[0];
   const sptRule = evals[1];
-  const eddRule = evals[3];
+  const wsptRule = evals[2];
+  const eddRule = evals[4];
+  const hasDistinctWeights = input.jobs.some(
+    (j) => j.weight !== undefined && Number.isFinite(j.weight) && Math.abs(j.weight - 1) > 1e-6,
+  );
+  const ganttSource = hasDistinctWeights ? wsptRule : bestFlow;
 
   const compTable: ResultTable = {
     id: 'scheduling-rules',
-    title: 'Perbandingan 5 Aturan Prioritas Penjadwalan (Single Machine)',
+    title: 'Perbandingan 6 Aturan Prioritas Penjadwalan (Single Machine)',
     headers: [
       'Aturan',
       'Urutan Job',
       'Rata-rata Flow Time',
+      'Weighted Flow (∑w·C)',
       'Utilisasi (%)',
       'Rata-rata Job di Sistem',
       'Avg Tardiness',
@@ -320,21 +354,35 @@ export function solveScheduling(
       e.ruleName,
       e.sequence.join(' → '),
       roundTo(e.avgCompletion, 2),
+      roundTo(e.weightedFlowTime, 2),
       `${roundTo(e.utilizationPct, 2)}%`,
       roundTo(e.avgJobsInSystem, 2),
       roundTo(e.avgLateness, 2),
       roundTo(e.maxLateness, 2),
       e.tardyCount,
     ]),
-    highlightRowIndices: [evals.findIndex((e) => e.ruleName === bestFlow.ruleName)],
+    highlightRowIndices: [
+      evals.findIndex((e) => e.ruleName === (hasDistinctWeights ? wsptRule.ruleName : bestFlow.ruleName)),
+    ],
   };
 
   const sptDetail: ResultTable = {
     id: 'scheduling-spt-detail',
-    title: `Detail Jadwal Terbaik (Flow Time): ${bestFlow.ruleName}`,
-    headers: ['Job', 'Waktu Proses', 'Due Date', 'Mulai', 'Selesai (Flow Time)', 'Keterlambatan'],
-    rows: bestFlow.detailRows,
+    title: `Detail Jadwal Terpilih: ${ganttSource.ruleName}`,
+    headers: ['Job', 'Waktu Proses', 'Bobot (w)', 'Due Date', 'Mulai', 'Selesai (Flow Time)', 'Keterlambatan'],
+    rows: ganttSource.detailRows,
   };
+
+  const singleGanttTasks = ganttSource.slots.map((slot) => ({
+    id: `sm-${slot.jobId}`,
+    label: `${slot.jobId}${hasDistinctWeights ? ` (w=${roundTo(slot.weight, 1)})` : ''}`,
+    es: roundTo(slot.start, 2),
+    ef: roundTo(slot.finish, 2),
+    ls: roundTo(slot.start, 2),
+    lf: roundTo(Math.max(slot.finish, slot.dueDate), 2),
+    slack: roundTo(Math.max(0, slot.dueDate - slot.finish), 2),
+    isCritical: slot.lateness > 1e-9,
+  }));
 
   const flowSavingsVsFcfs = fcfs.avgCompletion - sptRule.avgCompletion;
   const flowSavingsPct = fcfs.avgCompletion > 1e-9 ? (flowSavingsVsFcfs / fcfs.avgCompletion) * 100 : 0;
@@ -345,9 +393,10 @@ export function solveScheduling(
     jobTitle,
     status: 'success',
     executionMs: roundTo(performance.now() - start, 2),
-    summaryText: `SPT meminimalkan rata-rata Flow Time (${formatNum(bestFlow.avgCompletion, 2)}), EDD meminimalkan keterlambatan maksimum (${formatNum(eddRule.maxLateness, 2)}), dan ${bestAvgLate.ruleName.split(' ')[0]} menghasilkan keterlambatan rata-rata terkecil (${formatNum(bestAvgLate.avgLateness, 2)}).`,
+    summaryText: `SPT meminimalkan rata-rata Flow Time (${formatNum(bestFlow.avgCompletion, 2)}), WSPT meminimalkan Weighted Flow Time (${formatNum(wsptRule.weightedFlowTime, 2)}), EDD meminimalkan keterlambatan maksimum (${formatNum(eddRule.maxLateness, 2)}), dan ${bestAvgLate.ruleName.split(' ')[0]} menghasilkan keterlambatan rata-rata terkecil (${formatNum(bestAvgLate.avgLateness, 2)}).`,
     kpis: [
       { label: 'Flow Time Minimum (SPT)', value: formatNum(bestFlow.avgCompletion, 2), emphasis: 'primary' },
+      { label: 'Weighted Flow (WSPT)', value: formatNum(wsptRule.weightedFlowTime, 2), emphasis: hasDistinctWeights ? 'primary' : undefined },
       { label: 'Min. Avg Tardiness', value: `${formatNum(bestAvgLate.avgLateness, 2)} (${bestAvgLate.ruleName.split(' ')[0]})`, emphasis: 'success' },
       { label: 'Min. Max Tardiness (EDD)', value: formatNum(bestMaxLate.maxLateness, 2) },
       { label: 'Total Makespan', value: formatNum(bestFlow.makespan, 2) },
@@ -366,32 +415,50 @@ export function solveScheduling(
           annotation: `Late: ${roundTo(e.avgLateness, 1)}`,
         })),
       },
+      {
+        kind: 'gantt',
+        id: 'scheduling-single-gantt',
+        title: `Gantt Chart Mesin Tunggal — ${ganttSource.ruleName}`,
+        subtitle: 'Merah = Job melewati Due Date (Terlambat) · Hijau = Tepat Waktu · Abu-abu = Sisa Margin ke Due Date',
+        totalDuration: Math.max(
+          1,
+          roundTo(
+            Math.max(
+              ganttSource.makespan,
+              ...ganttSource.slots.map((s) => s.dueDate),
+            ),
+            2,
+          ),
+        ),
+        tasks: singleGanttTasks,
+      },
     ],
     warnings: [],
     auditSteps: [
       {
-        title: '1. Perhitungan Flow Time, Utilisasi & Keterlambatan',
-        formula: 'Avg Flow Time = ∑Cᵢ / n · Utilisasi = ∑tᵢ / ∑Cᵢ · Tardinessᵢ = max(0, Cᵢ - dᵢ)',
-        detail: `SPT menjamin rata-rata Flow Time minimum (${formatNum(bestFlow.avgCompletion, 2)}) dan WIP terendah (${formatNum(bestFlow.avgJobsInSystem, 2)} job); EDD menjamin Max Tardiness minimum (${formatNum(eddRule.maxLateness, 2)}); rata-rata keterlambatan terendah dicapai oleh ${bestAvgLate.ruleName.split(' ')[0]} (${formatNum(bestAvgLate.avgLateness, 2)}).`,
+        title: '1. Perhitungan Flow Time, WSPT, Utilisasi & Keterlambatan',
+        formula: 'Avg Flow = ∑Cᵢ/n · WSPT urutkan tᵢ/wᵢ menaik (min ∑wᵢCᵢ) · Tardinessᵢ = max(0, Cᵢ - dᵢ)',
+        detail: `SPT menjamin rata-rata Flow Time minimum (${formatNum(bestFlow.avgCompletion, 2)}) dan WIP terendah (${formatNum(bestFlow.avgJobsInSystem, 2)} job); WSPT menjamin Weighted Flow Time minimum (${formatNum(wsptRule.weightedFlowTime, 2)}); EDD menjamin Max Tardiness minimum (${formatNum(eddRule.maxLateness, 2)}); rata-rata keterlambatan terendah dicapai oleh ${bestAvgLate.ruleName.split(' ')[0]} (${formatNum(bestAvgLate.avgLateness, 2)}).`,
       },
     ],
     analysis: {
-      headline: `SPT Tekan Flow Time ${formatNum(flowSavingsPct, 1)}% vs FCFS; EDD Kunci Keterlambatan Maksimum di ${formatNum(eddRule.maxLateness, 2)}`,
-      interpretation: `Pada penjadwalan mesin tunggal tanpa waktu setup antar-pekerjaan, total makespan konstan (${formatNum(bestFlow.makespan, 2)}) di seluruh 5 aturan, namun urutan dispatching berdampak tajam pada Work-In-Process (WIP) dan ketepatan due date. SPT (${sptRule.sequence.join(' → ')}) meminimalkan rata-rata waktu selesai menjadi ${formatNum(sptRule.avgCompletion, 2)} dengan utilisasi tertinggi ${formatNum(sptRule.utilizationPct, 1)}%, sedangkan EDD (${eddRule.sequence.join(' → ')}) meminimalkan keterlambatan terparah (Max Tardiness = ${formatNum(eddRule.maxLateness, 2)}).`,
+      headline: `SPT Tekan Flow Time ${formatNum(flowSavingsPct, 1)}% vs FCFS; WSPT Kunci ∑w·C di ${formatNum(wsptRule.weightedFlowTime, 2)} & EDD Max Delay ${formatNum(eddRule.maxLateness, 2)}`,
+      interpretation: `Pada penjadwalan mesin tunggal tanpa waktu setup antar-pekerjaan, total makespan konstan (${formatNum(bestFlow.makespan, 2)}) di seluruh 6 aturan, namun urutan dispatching berdampak tajam pada Work-In-Process (WIP), biaya prioritas bobot, dan ketepatan due date. SPT (${sptRule.sequence.join(' → ')}) meminimalkan rata-rata waktu selesai menjadi ${formatNum(sptRule.avgCompletion, 2)} dengan utilisasi ${formatNum(sptRule.utilizationPct, 1)}%, WSPT (${wsptRule.sequence.join(' → ')}) meminimalkan total weighted flow time (${formatNum(wsptRule.weightedFlowTime, 2)}), sedangkan EDD (${eddRule.sequence.join(' → ')}) meminimalkan keterlambatan terparah (Max Tardiness = ${formatNum(eddRule.maxLateness, 2)}).`,
       sections: [
         {
-          heading: 'Trade-off Efisiensi Lantai Produksi (SPT) vs Komitmen Pelanggan (EDD / CR)',
-          body: `SPT menyelesaikan pekerjaan cepat lebih dulu sehingga mengurangi antrean rata-rata menjadi ${formatNum(sptRule.avgJobsInSystem, 2)} job (${sptRule.tardyCount} job terlambat, max tardiness ${formatNum(sptRule.maxLateness, 2)}). Sebaliknya, EDD memprioritaskan tenggat terdekat (${eddRule.tardyCount} job terlambat, avg tardiness ${formatNum(eddRule.avgLateness, 2)}, max tardiness ${formatNum(eddRule.maxLateness, 2)}), sementara keterlambatan rata-rata terendah dicapai oleh ${bestAvgLate.ruleName.split(' ')[0]} (${formatNum(bestAvgLate.avgLateness, 2)}).`,
+          heading: 'Trade-off Efisiensi Lantai Produksi (SPT/WSPT) vs Komitmen Pelanggan (EDD/CR)',
+          body: `SPT mengurangi antrean rata-rata menjadi ${formatNum(sptRule.avgJobsInSystem, 2)} job (${sptRule.tardyCount} job terlambat, max tardiness ${formatNum(sptRule.maxLateness, 2)}). WSPT memprioritaskan pesanan berbobot/bernilai tinggi dengan rasio waktu-per-bobot terkecil (${bestWeighted.ruleName.split(' ')[0]} optimal di ${formatNum(bestWeighted.weightedFlowTime, 2)}). Sebaliknya, EDD memprioritaskan tenggat terdekat (${eddRule.tardyCount} job terlambat, avg tardiness ${formatNum(eddRule.avgLateness, 2)}, max tardiness ${formatNum(eddRule.maxLateness, 2)}).`,
           tone: bestAvgLate.avgLateness <= 1e-6 ? 'positive' : 'neutral',
         },
       ],
       recommendations: [
-        `Terapkan aturan SPT (${sptRule.sequence.join(' → ')}) bila KPI utama adalah meminimalkan antrean WIP dan mempercepat rata-rata waktu penyelesaian seluruh pesanan.`,
-        `Terapkan aturan EDD (${eddRule.sequence.join(' → ')}) apabila kontrak pelanggan mengenakan penalti keterlambatan ekstrem (SLA max-delay), atau ${bestAvgLate.ruleName.split(' ')[0]} (${bestAvgLate.sequence.join(' → ')}) bila target utama adalah meminimalkan total keterlambatan rata-rata.`,
+        `Terapkan aturan SPT (${sptRule.sequence.join(' → ')}) bila seluruh order setara dan KPI utama adalah meminimalkan antrean WIP, atau WSPT (${wsptRule.sequence.join(' → ')}) bila order memiliki bobot prioritas/penalti berbeda.`,
+        `Terapkan aturan EDD (${eddRule.sequence.join(' → ')}) apabila kontrak pelanggan mengenakan penalti keterlambatan ekstrem (SLA max-delay), atau ${bestAvgLate.ruleName.split(' ')[0]} (${bestAvgLate.sequence.join(' → ')}) untuk meminimalkan keterlambatan rata-rata.`,
       ],
     },
     derivedValues: {
       bestFlowTime: roundTo(bestFlow.avgCompletion, 4),
+      wsptWeightedFlow: roundTo(wsptRule.weightedFlowTime, 4),
       minAvgLateness: roundTo(bestAvgLate.avgLateness, 4),
       minMaxLateness: roundTo(bestMaxLate.maxLateness, 4),
       bestMaxLateRule: bestMaxLate.ruleName.split(' ')[0],

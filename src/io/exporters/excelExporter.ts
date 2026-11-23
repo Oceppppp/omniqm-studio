@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { MODULE_MAP, MODULE_REGISTRY } from '../../core/registry/moduleRegistry.ts';
 import type {
   AggregatePlanningInput,
@@ -33,6 +32,25 @@ function sanitizeSheetName(raw: string, used: Set<string>): string {
   }
   used.add(name.toLowerCase());
   return name;
+}
+
+export function computeAutoColWidths(
+  rows: (string | number | boolean | null | undefined)[][],
+  minWch = 12,
+  maxWch = 64,
+): { wch: number }[] {
+  const colMax: number[] = [];
+  for (const row of rows) {
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < row.length; c += 1) {
+      const cell = row[c];
+      const str = cell === null || cell === undefined ? '' : String(cell);
+      const longestLine = str.split(/\r?\n/).reduce((m, line) => Math.max(m, line.length), 0);
+      const next = Math.min(maxWch, Math.max(minWch, longestLine + 3));
+      colMax[c] = Math.max(colMax[c] ?? minWch, next);
+    }
+  }
+  return colMax.map((wch) => ({ wch }));
 }
 
 export function moduleInputToSheetRows(
@@ -290,7 +308,8 @@ export function moduleInputToSheetRows(
   }
 }
 
-export function buildMasterTemplateBuffer(): ArrayBuffer {
+export async function buildMasterTemplateBuffer(): Promise<ArrayBuffer> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   const used = new Set<string>();
 
@@ -305,29 +324,36 @@ export function buildMasterTemplateBuffer(): ArrayBuffer {
     ['Daftar Modul Tersedia:', 'ID Modul', 'Nama Sheet'],
     ...MODULE_REGISTRY.map((m) => [m.indonesianName, m.id, `${m.code}_${m.id.slice(0, 20)}`]),
   ];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(readmeRows), sanitizeSheetName('README', used));
+  const readmeSheet = XLSX.utils.aoa_to_sheet(readmeRows);
+  readmeSheet['!cols'] = computeAutoColWidths(readmeRows);
+  XLSX.utils.book_append_sheet(wb, readmeSheet, sanitizeSheetName('README', used));
 
   for (const mod of MODULE_REGISTRY) {
     const rows = moduleInputToSheetRows(mod.id, DEFAULT_MODULE_INPUTS[mod.id]);
     const sheetName = sanitizeSheetName(`${mod.code}_${mod.id}`, used);
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), sheetName);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = computeAutoColWidths(rows);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
   }
 
   return XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
 }
 
-export function downloadMasterTemplateExcel(): void {
-  const buf = buildMasterTemplateBuffer();
+export async function downloadMasterTemplateExcel(): Promise<void> {
+  const buf = await buildMasterTemplateBuffer();
   triggerDownload(
     new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
     'Master_Template_16_Modul_OmniQM.xlsx',
   );
 }
 
-export function downloadSingleModuleTemplateExcel(job: ModuleJob): void {
+export async function downloadSingleModuleTemplateExcel(job: ModuleJob): Promise<void> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   const rows = moduleInputToSheetRows(job.moduleId, job.input);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), MODULE_MAP[job.moduleId].code);
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = computeAutoColWidths(rows);
+  XLSX.utils.book_append_sheet(wb, ws, MODULE_MAP[job.moduleId].code);
   const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
   triggerDownload(
     new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
@@ -335,7 +361,11 @@ export function downloadSingleModuleTemplateExcel(job: ModuleJob): void {
   );
 }
 
-export function exportBatchResultsExcel(jobs: ModuleJob[], summary: BatchRunSummary): void {
+export async function buildBatchResultsBuffer(
+  jobs: ModuleJob[],
+  summary: BatchRunSummary,
+): Promise<ArrayBuffer> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
   const used = new Set<string>();
 
@@ -364,9 +394,11 @@ export function exportBatchResultsExcel(jobs: ModuleJob[], summary: BatchRunSumm
     ]);
   }
 
+  const execSheet = XLSX.utils.aoa_to_sheet(execRows);
+  execSheet['!cols'] = computeAutoColWidths(execRows);
   XLSX.utils.book_append_sheet(
     wb,
-    XLSX.utils.aoa_to_sheet(execRows),
+    execSheet,
     sanitizeSheetName('Ringkasan_Eksekutif', used),
   );
 
@@ -406,14 +438,23 @@ export function exportBatchResultsExcel(jobs: ModuleJob[], summary: BatchRunSumm
       for (const r of tbl.rows) sheetRows.push(r);
     }
 
+    const detailSheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    detailSheet['!cols'] = computeAutoColWidths(sheetRows);
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.aoa_to_sheet(sheetRows),
+      detailSheet,
       sanitizeSheetName(`${meta.code}_${job.title}`, used),
     );
   }
 
-  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  return XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+}
+
+export async function exportBatchResultsExcel(
+  jobs: ModuleJob[],
+  summary: BatchRunSummary,
+): Promise<void> {
+  const buf = await buildBatchResultsBuffer(jobs, summary);
   triggerDownload(
     new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
     `Laporan_Hasil_OmniQM_${new Date().toISOString().slice(0, 10)}.xlsx`,

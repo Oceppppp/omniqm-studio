@@ -1,6 +1,11 @@
+import { useRef, useState } from 'react';
 import type { NetworkChartSpec, NetworkNodeSpec } from '../../../core/types/chart.types.ts';
+import { ChartExportActions } from './ChartExportActions.tsx';
 
 export function SvgNetworkChart({ spec }: { spec: NetworkChartSpec }) {
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<NetworkNodeSpec | null>(null);
+
   if (spec.nodes.length === 0) return null;
 
   const layers = new Map<number, NetworkNodeSpec[]>();
@@ -46,144 +51,180 @@ export function SvgNetworkChart({ spec }: { spec: NetworkChartSpec }) {
 
   return (
     <div className="chart-box">
-      <div className="chart-title">{spec.title}</div>
-      {spec.subtitle && <div className="chart-subtitle">{spec.subtitle}</div>}
-      <div style={{ overflowX: 'auto' }}>
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          style={{ display: 'block', width: '100%', minWidth: Math.min(width, 520), height: 'auto' }}
-        >
-          <defs>
-            <marker
-              id={normMarkerId}
-              viewBox="0 0 10 10"
-              refX="8"
-              refY="5"
-              markerWidth="6"
-              markerHeight="6"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--border-strong)" />
-            </marker>
-            <marker
-              id={critMarkerId}
-              viewBox="0 0 10 10"
-              refX="8"
-              refY="5"
-              markerWidth="6.5"
-              markerHeight="6.5"
-              orient="auto-start-reverse"
-            >
-              <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--error)" />
-            </marker>
-          </defs>
-
-          {spec.edges.map((edge, idx) => {
-            const p1 = positions.get(edge.from);
-            const p2 = positions.get(edge.to);
-            if (!p1 || !p2) return null;
-
-            const sameOrBack = p2.cx <= p1.cx;
-            const x1 = sameOrBack ? p1.cx : p1.cx + nodeW / 2;
-            const y1 = sameOrBack ? p1.cy + nodeH / 2 : p1.cy;
-            const x2 = sameOrBack ? p2.cx : p2.cx - nodeW / 2 - 2;
-            const y2 = sameOrBack ? p2.cy - nodeH / 2 - 2 : p2.cy;
-            const midX = (x1 + x2) / 2;
-            const d = sameOrBack
-              ? `M ${x1} ${y1} C ${x1 + 36} ${y1}, ${x2 - 36} ${y2}, ${x2} ${y2}`
-              : `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-
-            return (
-              <g key={`${edge.from}-${edge.to}-${idx}`}>
-                <path
-                  d={d}
-                  fill="none"
-                  stroke={edge.isCritical ? 'var(--error)' : 'var(--border-strong)'}
-                  strokeWidth={edge.isCritical ? 2.2 : 1.3}
-                  markerEnd={`url(#${edge.isCritical ? critMarkerId : normMarkerId})`}
-                />
-                {edge.label && (
-                  <text
-                    x={midX}
-                    y={(y1 + y2) / 2 - 4}
-                    textAnchor="middle"
-                    fontSize="8.5"
-                    fill={edge.isCritical ? 'var(--error)' : 'var(--text-muted)'}
-                    className="mono-num"
-                  >
-                    {edge.label}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-
-          {spec.nodes.map((node) => {
-            const pos = positions.get(node.id);
-            if (!pos) return null;
-            const x = pos.cx - nodeW / 2;
-            const y = pos.cy - nodeH / 2;
-            const crit = Boolean(node.isCritical);
-
-            return (
-              <g key={node.id}>
-                <rect
-                  x={x}
-                  y={y}
-                  width={nodeW}
-                  height={nodeH}
-                  rx={5}
-                  fill={crit ? 'var(--error-soft)' : 'var(--bg-surface)'}
-                  stroke={crit ? 'var(--error)' : 'var(--border-strong)'}
-                  strokeWidth={crit ? 1.6 : 1.2}
-                />
-                <rect
-                  x={x}
-                  y={y}
-                  width={3}
-                  height={nodeH}
-                  rx={1}
-                  fill={crit ? 'var(--error)' : 'var(--primary)'}
-                />
-                <text
-                  x={pos.cx}
-                  y={y + 17}
-                  textAnchor="middle"
-                  fontSize="10.5"
-                  fontWeight="700"
-                  fill={crit ? 'var(--error)' : 'var(--text-primary)'}
-                >
-                  {node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label}
-                </text>
-                {node.subtitle && (
-                  <text
-                    x={pos.cx}
-                    y={y + 31}
-                    textAnchor="middle"
-                    fontSize="8.8"
-                    fill="var(--text-secondary)"
-                    className="mono-num"
-                  >
-                    {node.subtitle}
-                  </text>
-                )}
-                {node.meta && (
-                  <text
-                    x={pos.cx}
-                    y={y + 44}
-                    textAnchor="middle"
-                    fontSize="8.2"
-                    fill="var(--text-muted)"
-                    className="mono-num"
-                  >
-                    {node.meta}
-                  </text>
-                )}
-              </g>
-            );
-          })}
-        </svg>
+      <div className="chart-header-row">
+        <div>
+          <div className="chart-title">{spec.title}</div>
+          {spec.subtitle && <div className="chart-subtitle">{spec.subtitle}</div>}
+        </div>
+        <ChartExportActions svgRef={svgRef} title={spec.title} />
       </div>
+
+      <div className="chart-svg-wrap">
+        <div style={{ overflowX: 'auto' }}>
+          <svg
+            ref={svgRef}
+            viewBox={`0 0 ${width} ${height}`}
+            style={{ display: 'block', width: '100%', minWidth: Math.min(width, 520), height: 'auto' }}
+            onMouseLeave={() => setHoveredNode(null)}
+          >
+            <defs>
+              <marker
+                id={normMarkerId}
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--border-strong)" />
+              </marker>
+              <marker
+                id={critMarkerId}
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6.5"
+                markerHeight="6.5"
+                orient="auto-start-reverse"
+              >
+                <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--error)" />
+              </marker>
+            </defs>
+
+            {spec.edges.map((edge, idx) => {
+              const p1 = positions.get(edge.from);
+              const p2 = positions.get(edge.to);
+              if (!p1 || !p2) return null;
+
+              const sameOrBack = p2.cx <= p1.cx;
+              const x1 = sameOrBack ? p1.cx : p1.cx + nodeW / 2;
+              const y1 = sameOrBack ? p1.cy + nodeH / 2 : p1.cy;
+              const x2 = sameOrBack ? p2.cx : p2.cx - nodeW / 2 - 2;
+              const y2 = sameOrBack ? p2.cy - nodeH / 2 - 2 : p2.cy;
+              const midX = (x1 + x2) / 2;
+              const d = sameOrBack
+                ? `M ${x1} ${y1} C ${x1 + 36} ${y1}, ${x2 - 36} ${y2}, ${x2} ${y2}`
+                : `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+
+              return (
+                <g key={`${edge.from}-${edge.to}-${idx}`}>
+                  <path
+                    d={d}
+                    fill="none"
+                    stroke={edge.isCritical ? 'var(--error)' : 'var(--border-strong)'}
+                    strokeWidth={edge.isCritical ? 2.2 : 1.3}
+                    markerEnd={`url(#${edge.isCritical ? critMarkerId : normMarkerId})`}
+                  />
+                  {edge.label && (
+                    <text
+                      x={midX}
+                      y={(y1 + y2) / 2 - 4}
+                      textAnchor="middle"
+                      fontSize="8.5"
+                      fill={edge.isCritical ? 'var(--error)' : 'var(--text-muted)'}
+                      className="mono-num"
+                    >
+                      {edge.label}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+
+            {spec.nodes.map((node) => {
+              const pos = positions.get(node.id);
+              if (!pos) return null;
+              const x = pos.cx - nodeW / 2;
+              const y = pos.cy - nodeH / 2;
+              const crit = Boolean(node.isCritical);
+              const isActive = hoveredNode?.id === node.id;
+
+              return (
+                <g
+                  key={node.id}
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredNode(node)}
+                >
+                  <rect
+                    x={x}
+                    y={y}
+                    width={nodeW}
+                    height={nodeH}
+                    rx={5}
+                    fill={crit ? 'var(--error-soft)' : 'var(--bg-surface)'}
+                    stroke={isActive ? 'var(--primary)' : crit ? 'var(--error)' : 'var(--border-strong)'}
+                    strokeWidth={isActive ? 2 : crit ? 1.6 : 1.2}
+                  />
+                  <rect
+                    x={x}
+                    y={y}
+                    width={3}
+                    height={nodeH}
+                    rx={1}
+                    fill={crit ? 'var(--error)' : 'var(--primary)'}
+                  />
+                  <text
+                    x={pos.cx}
+                    y={y + 17}
+                    textAnchor="middle"
+                    fontSize="10.5"
+                    fontWeight="700"
+                    fill={crit ? 'var(--error)' : 'var(--text-primary)'}
+                  >
+                    {node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label}
+                  </text>
+                  {node.subtitle && (
+                    <text
+                      x={pos.cx}
+                      y={y + 31}
+                      textAnchor="middle"
+                      fontSize="8.8"
+                      fill="var(--text-secondary)"
+                      className="mono-num"
+                    >
+                      {node.subtitle}
+                    </text>
+                  )}
+                  {node.meta && (
+                    <text
+                      x={pos.cx}
+                      y={y + 44}
+                      textAnchor="middle"
+                      fontSize="8.2"
+                      fill="var(--text-muted)"
+                      className="mono-num"
+                    >
+                      {node.meta}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        {hoveredNode && (
+          <div className="chart-tooltip no-print" role="status">
+            <div className="chart-tooltip-title">
+              {hoveredNode.label} {hoveredNode.isCritical ? '(Jalur Kritis)' : ''}
+            </div>
+            {hoveredNode.subtitle && (
+              <div className="chart-tooltip-row">
+                <span className="chart-tooltip-key">Detail</span>
+                <strong className="mono-num">{hoveredNode.subtitle}</strong>
+              </div>
+            )}
+            {hoveredNode.meta && (
+              <div className="chart-tooltip-row">
+                <span className="chart-tooltip-key">Metadata</span>
+                <span className="mono-num">{hoveredNode.meta}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       <div
         style={{
           display: 'flex',

@@ -1,11 +1,14 @@
 import { WorkspaceProvider } from './store/workspaceStore.tsx';
+import { WorkspaceErrorBoundary } from './ui/components/WorkspaceErrorBoundary.tsx';
 import { AppShell } from './ui/layouts/AppShell.tsx';
 
 export function App() {
   return (
-    <WorkspaceProvider>
-      <AppShell />
-    </WorkspaceProvider>
+    <WorkspaceErrorBoundary>
+      <WorkspaceProvider>
+        <AppShell />
+      </WorkspaceProvider>
+    </WorkspaceErrorBoundary>
   );
 }
 

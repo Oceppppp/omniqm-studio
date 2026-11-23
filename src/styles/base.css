@@ -83,11 +83,36 @@ button {
   background: hsla(215, 16%, 46%, 0.42);
 }
 
+.full-print-report {
+  display: none;
+}
+
 @page {
   margin: 14mm 12mm;
 }
 
 @media print {
+  :root,
+  [data-theme='dark'] {
+    --bg-app: #ffffff;
+    --bg-chrome: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-subtle: #f8fafc;
+    --bg-hover: #f1f5f9;
+    --bg-highlight: #eff6ff;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-hairline: #cbd5e1;
+    --border-strong: #94a3b8;
+    --primary: #113f67;
+    --primary-soft: #eef5fc;
+    --primary-border: #9ec0e0;
+    --success: #0b6e4f;
+    --warning: #9a5204;
+    --error: #b42318;
+  }
+
   html,
   body {
     background: #ffffff !important;
@@ -96,8 +121,63 @@ button {
 
   .no-print,
   .topbar,
-  .sidebar-rail {
+  .sidebar-rail,
+  .sidebar-backdrop,
+  .system-banners {
     display: none !important;
+  }
+
+  .app-root-full-print > .app-shell {
+    display: none !important;
+  }
+
+  .app-root-full-print .full-print-report {
+    display: block !important;
+  }
+
+  .print-cover-page {
+    padding: 0;
+  }
+
+  .print-cover-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #113f67;
+    margin-bottom: 0.35rem;
+  }
+
+  .print-cover-title {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 0.4rem;
+  }
+
+  .print-cover-subtitle {
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.55;
+  }
+
+  .print-module-section {
+    break-before: page;
+    page-break-before: always;
+    padding-top: 0.25rem;
+  }
+
+  .print-module-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1.5px solid #113f67;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #113f67;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
 
   .app-shell {
@@ -119,7 +199,8 @@ button {
   .analysis-panel,
   .audit-step-card,
   .kpi-grid,
-  .whatif-banner {
+  .whatif-banner,
+  .chart-box {
     break-inside: avoid;
     box-shadow: none !important;
     border-color: #cbd5e1 !important;
